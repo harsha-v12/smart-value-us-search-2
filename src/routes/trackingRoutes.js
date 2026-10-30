@@ -5,8 +5,8 @@ const router = express.Router();
 
 // Landing Page Routes (SmartValue)
 router.get('/', TrackingController.handleLandingPage);
-router.get('/us/search', TrackingController.handleLandingPage);
-router.get('/us/search/', TrackingController.handleLandingPage);
+router.get('/us/search-2', TrackingController.handleLandingPage);
+router.get('/us/search-2/', TrackingController.handleLandingPage);
 
 // Direct Redirect Endpoints (HTTP 302)
 router.get('/click', TrackingController.handleRedirect);

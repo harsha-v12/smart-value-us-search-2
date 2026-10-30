@@ -1,35 +1,38 @@
-# Instant Home Quotes - Tracking & Traffic Routing Backend
+# Smart Value Search 2 - Tracking & Traffic Routing Backend
 
-Dedicated Node.js backend for parameter validation, anti-bot/macro rule targeting, dynamic traffic routing, and serving the `/info/home/` landing page with dynamic Routeclk click links.
+Dedicated Node.js backend for parameter validation, anti-bot/macro rule targeting, dynamic traffic routing, and serving the `/us/search-2/` landing page with dynamic tracking links.
 
 ---
 
 ## 🎯 Features
 
-- **Landing Page Route (`GET /info/home/`)**:
-  - **Missing / Empty / Macro Parameters** $\rightarrow$ Automatically 302 redirects to Valuerise.
-  - **Valid Parameters** $\rightarrow$ Stays on the landing page, rendering the age buttons (`18-24`, `25-34`, `35-44`, etc.) wired directly with the Routeclk tracking link.
-- **Advanced Targeting Rules**:
-  - `p2 - targeting`: DENY if `p2` is empty.
-  - `p2 - targeting-for-braces`: DENY if `p2` starts with `{` (unresolved macro).
-  - `p2 - targeting- match camp id`: DENY if `p2` matches unreplaced macros (`%7B%7Bcampaign.id%7D%7D`, `{campaign.id}`, `{{campaing.id}}`, etc.).
+- **Landing Page Route (`GET /us/search-2/` or `GET /`)**:
+  - **Missing / Empty / Macro Parameters** $\rightarrow$ Automatically 302 redirects to Fallback (`openvista.live`).
+  - **Valid Parameters** $\rightarrow$ Stays on the landing page, rendering the age selector buttons (`18-25`, `26-35`, `36-45`, `46-55`, `56+`) wired directly to the verified primary tracking link (`rutorbit.com`).
+- **4-Point Quality & Targeting Rules**:
+  - **Condition 1 (Click ID)**: `fbclid` (Facebook) or `ttclid` (TikTok) must be present, non-empty, and free of unresolved macros.
+  - **Condition 2 (`p2`)**: Must start with an allowed prefix (`US-hs-Bv` or `US-TIK-HI-RV`).
+  - **Condition 3 (`p15`)**: Secondary campaign tag must start with an allowed prefix (`US-hs-Bv` or `US-TIK-HI-RV`).
+  - **Condition 4 (Channel Flag)**: TikTok requires `tk=1`; Facebook requires `fb=1`.
+- **Target Tracking Link Injection**:
+  - Injects channel internal identifier `p11` (`1253687` for Facebook, `2876212` for TikTok) placed strictly before `p15`.
 - **Direct 302 Redirect Support** (`GET /click` or `GET /r`).
 - **REST API Support** (`GET /api/v1/tracking/resolve`).
-- **Environment Configurable**: All base URLs, fallback links, campaign IDs, and pub IDs are configurable via `.env`.
+- **Environment Configurable**: All base URLs, fallback links, and prefixes are configurable via `.env`.
 
 ---
 
 ## 📁 Repository Structure
 
 ```
-instanthomequotes-backend/
+smart-value-search-2/
 ├── src/
 │   ├── config/
 │   │   └── config.js              # Environment configuration
 │   ├── controllers/
 │   │   └── trackingController.js  # Handles landing page, redirects, and API
 │   ├── rules/
-│   │   └── ruleEngine.js          # Advanced targeting rules
+│   │   └── ruleEngine.js          # 4-tier targeting and anti-bot rule engine
 │   ├── routes/
 │   │   └── trackingRoutes.js      # Express route definitions
 │   ├── services/
@@ -76,25 +79,25 @@ npm test
 
 ## 📡 Routes Reference
 
-### 1. Landing Page (`GET /info/home/` or `GET /info/home`)
-- **When `p2` is empty or template macro**:
+### 1. Landing Page (`GET /us/search-2/` or `GET /`)
+- **When parameters are invalid or empty**:
   ```bash
-  curl -i "http://localhost:3000/info/home/?fbclid=test_fb&p2="
+  curl -i "http://localhost:3003/us/search-2/?fbclid=test_fb&p2=&p15=US-hs-Bv-1&fb=1"
   ```
-  $\rightarrow$ Redirects (302) to `https://valuerise.live/index/?ccd=test_fb&vclk=34&fct=test_fb`
-- **When `p2` is valid**:
+  $\rightarrow$ Redirects (302) to `https://openvista.live/?clk=test_fb&zid=9482163&src=test_fb`
+- **When all parameters are valid (Facebook)**:
   ```bash
-  curl -i "http://localhost:3000/info/home/?fbclid=test_fb&p2=valid_id&p3=sub3"
+  curl -i "http://localhost:3003/us/search-2/?fbclid=test_fb&p2=US-hs-Bv-camp1&p15=US-hs-Bv-sub1&fb=1"
   ```
   $\rightarrow$ Returns HTML page (200 OK) with age buttons wired to:
-  `https://decode.routeclk.co/click?campaign_id=3647&pub_id=4905&fbclid=test_fb&p2=valid_id&p3=sub3...`
+  `https://nav.rutorbit.com/t/NDkwNV82NDA1/?url_id=2&fbclid=test_fb&p2=US-hs-Bv-camp1&p11=1253687&p15=US-hs-Bv-sub1`
 
 ### 2. Direct Redirect (`GET /click` or `GET /r`)
-- **Valid P2**: Redirects to Routeclk
-- **Invalid P2**: Redirects to Valuerise
+- **Valid Request**: Redirects to primary tracking link (Rutorbit).
+- **Invalid Request**: Redirects to Fallback (`openvista.live`).
 
 ### 3. JSON API (`GET /api/v1/tracking/resolve`)
-Returns `{ status, destinationUrl, isFallback, targetPlatform }`.
+Returns `{ status, destinationUrl, isFallback, targetPlatform, denyReason }`.
 
 ### 4. Health Check (`GET /health`)
 Returns `{ status: "ok", uptime, timestamp }`.

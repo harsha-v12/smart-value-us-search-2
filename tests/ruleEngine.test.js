@@ -4,6 +4,7 @@ const config = require('../src/config/config');
 const {
   evaluateFbclidRule,
   evaluateP2Rule,
+  evaluateP15Rule,
   evaluateSub7Rule,
   validateTrackingParams,
   REQUIRED_PREFIX,
@@ -60,31 +61,32 @@ describe('Rule Engine - 3 Conditions Validation', () => {
     });
   });
 
-  describe('Condition 3: SUB7 STARTS_WITH US-hs-Bv', () => {
-    it('should DENY when sub7 is empty or undefined', () => {
+  describe('Condition 3: P15 STARTS_WITH US-hs-Bv', () => {
+    it('should DENY when p15 is empty or undefined', () => {
       const emptyCases = ['', '   ', null, undefined];
       for (const val of emptyCases) {
-        const res = evaluateSub7Rule(val);
+        const res = evaluateP15Rule(val);
         assert.strictEqual(res.isDenied, true);
+        assert.strictEqual(res.reason, 'p15_empty');
       }
     });
 
-    it('should DENY when sub7 does NOT start with US-hs-Bv', () => {
-      const invalidPrefixCases = ['sub_abc', 'HI-Lead-Rvs', '12345', 'lead_rvs', '{sub7}'];
+    it('should DENY when p15 does NOT start with US-hs-Bv', () => {
+      const invalidPrefixCases = ['sub_abc', 'HI-Lead-Rvs', '12345', 'lead_rvs', '{p15}'];
       for (const val of invalidPrefixCases) {
-        const res = evaluateSub7Rule(val);
+        const res = evaluateP15Rule(val);
         assert.strictEqual(res.isDenied, true);
       }
     });
 
-    it('should ALLOW when sub7 starts with US-hs-Bv or US-TIK-HI-RV', () => {
+    it('should ALLOW when p15 starts with US-hs-Bv or US-TIK-HI-RV', () => {
       const validCases = [
         'US-hs-Bv', 'US-hs-Bv-test', 'US-hs-Bv_subgroup',
         'US-hs-Bv-sub1', 'us-hs-bv_group',
         'US-TIK-HI-RVS', 'US-TIK-HI-RV', 'US-TIK-HI-RV-sub1', 'us-tik-hi-rv-group',
       ];
       for (const val of validCases) {
-        const res = evaluateSub7Rule(val);
+        const res = evaluateP15Rule(val);
         assert.strictEqual(res.isDenied, false);
         assert.strictEqual(res.reason, null);
       }
@@ -92,40 +94,41 @@ describe('Rule Engine - 3 Conditions Validation', () => {
   });
 
   describe('Combined 3-Condition Evaluation (validateTrackingParams)', () => {
-    it('should DENY if both fbclid and ttclid are missing even if p2 & sub7 are valid', () => {
+    it('should DENY if both fbclid and ttclid are missing even if p2 & p15 are valid', () => {
       const res = validateTrackingParams({
         p2: 'US-hs-Bv-1',
-        sub7: 'US-hs-Bv-2',
+        p15: 'US-hs-Bv-2',
       });
       assert.strictEqual(res.isValid, false);
       assert.strictEqual(res.isDenied, true);
     });
 
-    it('should DENY if p2 does not start with valid prefix even if fbclid & sub7 are valid', () => {
+    it('should DENY if p2 does not start with valid prefix even if fbclid & p15 are valid', () => {
       const res = validateTrackingParams({
         fbclid: '12345',
         p2: 'other_campaign',
-        sub7: 'US-hs-Bv-2',
+        p15: 'US-hs-Bv-2',
       });
       assert.strictEqual(res.isValid, false);
       assert.strictEqual(res.isDenied, true);
     });
 
-    it('should DENY if sub7 does not start with valid prefix even if fbclid & p2 are valid', () => {
+    it('should DENY if p15 does not start with valid prefix even if fbclid & p2 are valid', () => {
       const res = validateTrackingParams({
         fbclid: '12345',
         p2: 'US-hs-Bv-1',
-        sub7: 'other_sub',
+        p15: 'other_sub',
       });
       assert.strictEqual(res.isValid, false);
       assert.strictEqual(res.isDenied, true);
+      assert.strictEqual(res.denyReason, 'p15_prefix_mismatch');
     });
 
     it('should ALLOW when ALL conditions are satisfied for Facebook (US-hs-Bv + fb=1)', () => {
       const res = validateTrackingParams({
         fbclid: '12345',
         p2: 'US-hs-Bv-campaign-100',
-        sub7: 'US-hs-Bv-adset-200',
+        p15: 'US-hs-Bv-adset-200',
         fb: '1',
       });
       assert.strictEqual(res.isValid, true);
@@ -137,7 +140,7 @@ describe('Rule Engine - 3 Conditions Validation', () => {
       const resMissing = validateTrackingParams({
         fbclid: '12345',
         p2: 'US-hs-Bv-campaign-100',
-        sub7: 'US-hs-Bv-adset-200',
+        p15: 'US-hs-Bv-adset-200',
       });
       assert.strictEqual(resMissing.isValid, false);
       assert.strictEqual(resMissing.isDenied, true);
@@ -146,7 +149,7 @@ describe('Rule Engine - 3 Conditions Validation', () => {
       const resOther = validateTrackingParams({
         fbclid: '12345',
         p2: 'US-hs-Bv-campaign-100',
-        sub7: 'US-hs-Bv-adset-200',
+        p15: 'US-hs-Bv-adset-200',
         fb: '0',
       });
       assert.strictEqual(resOther.isValid, false);
@@ -158,7 +161,7 @@ describe('Rule Engine - 3 Conditions Validation', () => {
       const res = validateTrackingParams({
         ttclid: 'fb_123',
         p2: 'US-TIK-HI-RVS',
-        sub7: 'US-TIK-HI-RVS',
+        p15: 'US-TIK-HI-RVS',
         tk: '1',
       });
       assert.strictEqual(res.isValid, true);
@@ -170,7 +173,7 @@ describe('Rule Engine - 3 Conditions Validation', () => {
       const resMissing = validateTrackingParams({
         ttclid: 'fb_123',
         p2: 'US-TIK-HI-RVS',
-        sub7: 'US-TIK-HI-RVS',
+        p15: 'US-TIK-HI-RVS',
       });
       assert.strictEqual(resMissing.isValid, false);
       assert.strictEqual(resMissing.isDenied, true);
@@ -179,7 +182,7 @@ describe('Rule Engine - 3 Conditions Validation', () => {
       const resOther = validateTrackingParams({
         ttclid: 'fb_123',
         p2: 'US-TIK-HI-RVS',
-        sub7: 'US-TIK-HI-RVS',
+        p15: 'US-TIK-HI-RVS',
         tk: '0',
       });
       assert.strictEqual(resOther.isValid, false);
@@ -194,7 +197,7 @@ describe('Tracking Service - Destination URL Generation', () => {
     const result = TrackingService.resolveDestination({
       fbclid: 'test_fbclid_123',
       p2: 'wrong_prefix',
-      sub7: 'US-hs-Bv-1',
+      p15: 'US-hs-Bv-1',
     });
 
     assert.strictEqual(result.isFallback, true);
@@ -205,11 +208,11 @@ describe('Tracking Service - Destination URL Generation', () => {
     assert.match(result.destinationUrl, /src=test_fbclid_123/);
   });
 
-  it('should route Facebook traffic to Routeclk when fb=1 is present and attach sub1=1253687 before sub7', () => {
+  it('should route Facebook traffic to Routeclk when fb=1 is present and attach p11=1253687 before p15', () => {
     const result = TrackingService.resolveDestination({
       fbclid: 'fb_click_999',
       p2: 'US-hs-Bv-camp',
-      sub7: 'US-hs-Bv-sub',
+      p15: 'US-hs-Bv-sub',
       fb: '1',
       p3: 'test_p3',
       p4: 'test_p4',
@@ -223,33 +226,33 @@ describe('Tracking Service - Destination URL Generation', () => {
     assert.ok(result.destinationUrl.startsWith(config.routeclk.baseUrl));
     assert.match(result.destinationUrl, /fbclid=fb_click_999/);
     assert.match(result.destinationUrl, /p2=US-hs-Bv-camp/);
-    assert.match(result.destinationUrl, /sub1=1253687/);
-    assert.match(result.destinationUrl, /sub7=US-hs-Bv-sub/);
+    assert.match(result.destinationUrl, /p11=1253687/);
+    assert.match(result.destinationUrl, /p15=US-hs-Bv-sub/);
     assert.match(result.destinationUrl, /p3=test_p3/);
     assert.match(result.destinationUrl, /p4=test_p4/);
     assert.match(result.destinationUrl, /p5=test_p5/);
     assert.match(result.destinationUrl, /p6=test_p6/);
     assert.match(result.destinationUrl, /p10=test_p10/);
 
-    // Verify sub1 is positioned before sub7
-    const sub1Index = result.destinationUrl.indexOf('sub1=1253687');
-    const sub7Index = result.destinationUrl.indexOf('sub7=US-hs-Bv-sub');
-    assert.ok(sub1Index !== -1, 'sub1 must be present in destinationUrl');
-    assert.ok(sub7Index !== -1, 'sub7 must be present in destinationUrl');
-    assert.ok(sub1Index < sub7Index, 'sub1 must appear before sub7');
+    // Verify p11 is positioned before p15
+    const p11Index = result.destinationUrl.indexOf('p11=1253687');
+    const p15Index = result.destinationUrl.indexOf('p15=US-hs-Bv-sub');
+    assert.ok(p11Index !== -1, 'p11 must be present in destinationUrl');
+    assert.ok(p15Index !== -1, 'p15 must be present in destinationUrl');
+    assert.ok(p11Index < p15Index, 'p11 must appear before p15');
 
-    // Verify sub1 is NOT the last parameter
+    // Verify p11 is NOT the last parameter
     const url = new URL(result.destinationUrl);
     const searchParamsKeys = Array.from(url.searchParams.keys());
     const lastKey = searchParamsKeys[searchParamsKeys.length - 1];
-    assert.notStrictEqual(lastKey, 'sub1', 'sub1 must NOT be the last parameter');
+    assert.notStrictEqual(lastKey, 'p11', 'p11 must NOT be the last parameter');
   });
 
   it('should route Facebook traffic to Fallback when fb=1 is missing', () => {
     const resultMissing = TrackingService.resolveDestination({
       fbclid: 'fb_click_999',
       p2: 'US-hs-Bv-camp',
-      sub7: 'US-hs-Bv-sub',
+      p15: 'US-hs-Bv-sub',
     });
     assert.strictEqual(resultMissing.isFallback, true);
     assert.strictEqual(resultMissing.targetPlatform, 'fallback');
@@ -259,7 +262,7 @@ describe('Tracking Service - Destination URL Generation', () => {
     const resultOther = TrackingService.resolveDestination({
       fbclid: 'fb_click_999',
       p2: 'US-hs-Bv-camp',
-      sub7: 'US-hs-Bv-sub',
+      p15: 'US-hs-Bv-sub',
       fb: '0',
     });
     assert.strictEqual(resultOther.isFallback, true);
@@ -267,33 +270,33 @@ describe('Tracking Service - Destination URL Generation', () => {
     assert.strictEqual(resultOther.denyReason, 'facebook_missing_fb');
   });
 
-  it('should route TikTok traffic to NDk5OV82NDA1 base URL with ttclid and sub1=2876212 when tk=1', () => {
+  it('should route TikTok traffic to routeclk base URL with ttclid and p11=2876212 when tk=1', () => {
     const result = TrackingService.resolveDestination({
       ttclid: 'fb_123',
       p2: 'US-TIK-HI-RVS',
-      sub7: 'US-TIK-HI-RVS',
+      p15: 'US-TIK-HI-RVS',
       tk: '1',
     });
 
     assert.strictEqual(result.isFallback, false);
     assert.strictEqual(result.targetPlatform, 'routeclk');
-    assert.ok(result.destinationUrl.startsWith('https://nav.rutorbit.com/t/NDk5OV82NDA1/'));
+    assert.ok(result.destinationUrl.startsWith(config.routeclk.baseUrl));
     assert.match(result.destinationUrl, /ttclid=fb_123/);
     assert.match(result.destinationUrl, /p2=US-TIK-HI-RVS/);
-    assert.match(result.destinationUrl, /sub1=2876212/);
-    assert.match(result.destinationUrl, /sub7=US-TIK-HI-RVS/);
+    assert.match(result.destinationUrl, /p11=2876212/);
+    assert.match(result.destinationUrl, /p15=US-TIK-HI-RVS/);
 
-    // sub1 must be before sub7
-    const sub1Pos = result.destinationUrl.indexOf('sub1=2876212');
-    const sub7Pos = result.destinationUrl.indexOf('sub7=US-TIK-HI-RVS');
-    assert.ok(sub1Pos < sub7Pos, 'sub1 must appear before sub7 for TikTok traffic');
+    // p11 must be before p15
+    const p11Pos = result.destinationUrl.indexOf('p11=2876212');
+    const p15Pos = result.destinationUrl.indexOf('p15=US-TIK-HI-RVS');
+    assert.ok(p11Pos < p15Pos, 'p11 must appear before p15 for TikTok traffic');
   });
 
   it('should route TikTok traffic to Fallback when tk=1 is missing', () => {
     const result = TrackingService.resolveDestination({
       ttclid: 'fb_123',
       p2: 'US-TIK-HI-RVS',
-      sub7: 'US-TIK-HI-RVS',
+      p15: 'US-TIK-HI-RVS',
     });
 
     assert.strictEqual(result.isFallback, true);

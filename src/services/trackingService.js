@@ -61,11 +61,11 @@ class TrackingService {
       };
     }
 
-    // Determine Base URL (TikTok vs Facebook/SmartValue)
+    // /us/search-2/ uses one dedicated destination for every allowed channel.
     const isTikTok = (ttclid !== '') || p2.toLowerCase().startsWith('us-tik-hi-rv');
-    const selectedBaseUrl = isTikTok
-      ? (config.routeclk.tiktokBaseUrl || 'https://nav.rutorbit.com/t/NDk5OV82NDA1/')
-      : (config.routeclk.baseUrl || 'https://nav.rutorbit.com/t/NDkwNV82NDA1/');
+    const selectedBaseUrl = config.routeclk.search2BaseUrl
+      || config.routeclk.baseUrl
+      || 'https://nav.rutorbit.com/t/NDkwNV82NDA1/?url_id=2';
 
     // Build Primary Tracking URL
     const targetUrl = new URL(selectedBaseUrl);
@@ -88,23 +88,23 @@ class TrackingService {
     if (fbclid) targetUrl.searchParams.set('fbclid', fbclid);
     if (p2) targetUrl.searchParams.set('p2', p2);
 
-    // Attach sub1 before sub7 (ensuring it is not the last parameter)
-    // TikTok (tk=1) uses sub1=2876212; Facebook (fb=1) uses sub1=1253687
+    // Attach p11 before p15 (ensuring it is not the last parameter)
+    // TikTok (tk=1) uses p11=2876212; Facebook (fb=1) uses p11=1253687
     if (isTikTok) {
       const isTkOne = query.tk !== undefined && query.tk.toString().trim() === '1';
       if (isTkOne) {
-        targetUrl.searchParams.set('sub1', config.routeclk.tiktokSub1 || '2876212');
+        targetUrl.searchParams.set('p11', config.routeclk.tiktokP11 || '2876212');
       }
     } else {
       const isFbOne = query.fb !== undefined && query.fb.toString().trim() === '1';
       if (isFbOne) {
-        targetUrl.searchParams.set('sub1', config.routeclk.facebookSub1 || '1253687');
+        targetUrl.searchParams.set('p11', config.routeclk.facebookP11 || '1253687');
       }
     }
 
-    const sub7 = query.sub7 || query.SUB7 || query.p7 || query.P7;
-    if (sub7) {
-      targetUrl.searchParams.set('sub7', sub7.toString());
+    const p15 = query.p15 || query.P15;
+    if (p15) {
+      targetUrl.searchParams.set('p15', p15.toString());
     }
 
     // Only attach p3–p6 / p10 if they are actually present and non-empty in query

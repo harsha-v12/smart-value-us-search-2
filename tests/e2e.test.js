@@ -44,13 +44,13 @@ describe('End-to-End Test Suite: 3-Condition Rule Engine & SmartValue Endpoints'
 
   describe('Condition 1: fbclid check', () => {
     it('should redirect to fallback if fbclid is missing', async () => {
-      const res = await makeRequest('/us/search/?p2=US-hs-Bv-1&sub7=US-hs-Bv-2');
+      const res = await makeRequest('/us/search-2/?p2=US-hs-Bv-1&p15=US-hs-Bv-2');
       assert.strictEqual(res.statusCode, 302);
       assert.ok(res.headers.location.startsWith(config.fallback.baseUrl));
     });
 
     it('should redirect to fallback if fbclid is empty', async () => {
-      const res = await makeRequest('/us/search/?fbclid=&p2=US-hs-Bv-1&sub7=US-hs-Bv-2');
+      const res = await makeRequest('/us/search-2/?fbclid=&p2=US-hs-Bv-1&p15=US-hs-Bv-2');
       assert.strictEqual(res.statusCode, 302);
       assert.ok(res.headers.location.startsWith(config.fallback.baseUrl));
     });
@@ -58,79 +58,80 @@ describe('End-to-End Test Suite: 3-Condition Rule Engine & SmartValue Endpoints'
 
   describe('Condition 2: p2 STARTS_WITH US-hs-Bv', () => {
     it('should redirect to fallback if p2 does NOT start with US-hs-Bv', async () => {
-      const res = await makeRequest('/us/search/?fbclid=12345&p2=other_campaign&sub7=US-hs-Bv-2');
+      const res = await makeRequest('/us/search-2/?fbclid=12345&p2=other_campaign&p15=US-hs-Bv-2');
       assert.strictEqual(res.statusCode, 302);
       assert.ok(res.headers.location.startsWith(config.fallback.baseUrl));
     });
 
     it('should redirect to fallback if p2 is empty', async () => {
-      const res = await makeRequest('/us/search/?fbclid=12345&p2=&sub7=US-hs-Bv-2');
+      const res = await makeRequest('/us/search-2/?fbclid=12345&p2=&p15=US-hs-Bv-2');
       assert.strictEqual(res.statusCode, 302);
       assert.ok(res.headers.location.startsWith(config.fallback.baseUrl));
     });
   });
 
-  describe('Condition 3: sub7 STARTS_WITH US-hs-Bv', () => {
-    it('should redirect to fallback if sub7 does NOT start with US-hs-Bv', async () => {
-      const res = await makeRequest('/us/search/?fbclid=12345&p2=US-hs-Bv-1&sub7=wrong_sub');
+  describe('Condition 3: p15 STARTS_WITH US-hs-Bv', () => {
+    it('should redirect to fallback if p15 does NOT start with US-hs-Bv', async () => {
+      const res = await makeRequest('/us/search-2/?fbclid=12345&p2=US-hs-Bv-1&p15=wrong_sub');
       assert.strictEqual(res.statusCode, 302);
       assert.ok(res.headers.location.startsWith(config.fallback.baseUrl));
     });
 
-    it('should redirect to fallback if sub7 is missing', async () => {
-      const res = await makeRequest('/us/search/?fbclid=12345&p2=US-hs-Bv-1');
+    it('should redirect to fallback if p15 is missing', async () => {
+      const res = await makeRequest('/us/search-2/?fbclid=12345&p2=US-hs-Bv-1');
       assert.strictEqual(res.statusCode, 302);
       assert.ok(res.headers.location.startsWith(config.fallback.baseUrl));
     });
   });
 
   describe('Positive Case: ALL Conditions Satisfied (ALLOW -> Stay on Landing Page)', () => {
-    it('should return 200 HTML with age buttons pointing to Routeclk for Facebook (fb=1 & sub1=1253687)', async () => {
-      const res = await makeRequest('/us/search/?fbclid=12345&p2=US-hs-Bv-camp1&sub7=US-hs-Bv-sub1&fb=1&p3=geo_us&p4=feed_ad');
+    it('should return 200 HTML with age buttons pointing to Routeclk for Facebook (fb=1 & p11=1253687)', async () => {
+      const res = await makeRequest('/us/search-2/?fbclid=12345&p2=US-hs-Bv-camp1&p15=US-hs-Bv-sub1&fb=1&p3=geo_us&p4=feed_ad');
       assert.strictEqual(res.statusCode, 200);
       assert.match(res.headers['content-type'], /text\/html/);
 
       const expectedTrackingUrl = new URL(config.routeclk.baseUrl);
       expectedTrackingUrl.searchParams.set('fbclid', '12345');
       expectedTrackingUrl.searchParams.set('p2', 'US-hs-Bv-camp1');
-      expectedTrackingUrl.searchParams.set('sub1', '1253687');
-      expectedTrackingUrl.searchParams.set('sub7', 'US-hs-Bv-sub1');
+      expectedTrackingUrl.searchParams.set('p11', '1253687');
+      expectedTrackingUrl.searchParams.set('p15', 'US-hs-Bv-sub1');
       expectedTrackingUrl.searchParams.set('p3', 'geo_us');
       expectedTrackingUrl.searchParams.set('p4', 'feed_ad');
 
-      assert.ok(res.body.includes(`href="${expectedTrackingUrl.toString()}"`));
-      assert.ok(res.body.includes('18-24'));
-      assert.ok(res.body.includes('25-34'));
-      assert.ok(res.body.includes('35-44'));
-      assert.ok(res.body.includes('45-54'));
-      assert.ok(res.body.includes('55-64'));
-      assert.ok(res.body.includes('65+'));
+      assert.ok(res.body.includes(expectedTrackingUrl.toString()));
+      assert.ok(res.body.includes('18-25'));
+      assert.ok(res.body.includes('26-35'));
+      assert.ok(res.body.includes('36-45'));
+      assert.ok(res.body.includes('46-55'));
+      assert.ok(res.body.includes('56+'));
+      assert.ok(res.body.includes('Protect Your Home in Minutes'));
     });
 
     it('should return 404 for removed /info/home route', async () => {
-      const res = await makeRequest('/info/home/?fbclid=12345&p2=US-hs-Bv-camp1&sub7=US-hs-Bv-sub1&fb=1');
+      const res = await makeRequest('/info/home/?fbclid=12345&p2=US-hs-Bv-camp1&p15=US-hs-Bv-sub1&fb=1');
       assert.strictEqual(res.statusCode, 404);
     });
 
     it('should return JSON API response when requested via API with fb=1', async () => {
-      const res = await makeRequest('/api/v1/tracking/resolve?fbclid=12345&p2=US-hs-Bv-camp1&sub7=US-hs-Bv-sub1&fb=1');
+      const res = await makeRequest('/api/v1/tracking/resolve?fbclid=12345&p2=US-hs-Bv-camp1&p15=US-hs-Bv-sub1&fb=1');
       assert.strictEqual(res.statusCode, 200);
       const json = JSON.parse(res.body);
       assert.strictEqual(json.status, 'success');
       assert.strictEqual(json.isFallback, false);
       assert.strictEqual(json.targetPlatform, 'routeclk');
-      assert.ok(json.destinationUrl.includes('sub1=1253687'));
+      assert.ok(json.destinationUrl.includes('p11=1253687'));
+      assert.ok(json.destinationUrl.includes('p15=US-hs-Bv-sub1'));
       assert.strictEqual(json.denyReason, null);
     });
 
     it('should redirect Facebook traffic to fallback if fb=1 is missing', async () => {
-      const res = await makeRequest('/us/search/?fbclid=12345&p2=US-hs-Bv-camp1&sub7=US-hs-Bv-sub1');
+      const res = await makeRequest('/us/search-2/?fbclid=12345&p2=US-hs-Bv-camp1&p15=US-hs-Bv-sub1');
       assert.strictEqual(res.statusCode, 302);
       assert.ok(res.headers.location.startsWith(config.fallback.baseUrl));
     });
 
     it('should return isFallback: true via JSON API when Facebook traffic is missing fb=1', async () => {
-      const res = await makeRequest('/api/v1/tracking/resolve?fbclid=12345&p2=US-hs-Bv-camp1&sub7=US-hs-Bv-sub1');
+      const res = await makeRequest('/api/v1/tracking/resolve?fbclid=12345&p2=US-hs-Bv-camp1&p15=US-hs-Bv-sub1');
       assert.strictEqual(res.statusCode, 200);
       const json = JSON.parse(res.body);
       assert.strictEqual(json.status, 'success');
@@ -139,32 +140,42 @@ describe('End-to-End Test Suite: 3-Condition Rule Engine & SmartValue Endpoints'
       assert.strictEqual(json.targetPlatform, 'fallback');
     });
 
-    it('should handle TikTok traffic (ttclid + US-TIK-HI-RVS + tk=1) and wire buttons to NDk5OV82NDA1', async () => {
-      const res = await makeRequest('/us/search/?ttclid=fb_123&p2=US-TIK-HI-RVS&sub7=US-TIK-HI-RVS&tk=1');
+    it('should handle TikTok traffic (ttclid + US-TIK-HI-RVS + tk=1) and wire buttons to search2 destination', async () => {
+      const res = await makeRequest('/us/search-2/?ttclid=fb_123&p2=US-TIK-HI-RVS&p15=US-TIK-HI-RVS&tk=1');
       assert.strictEqual(res.statusCode, 200);
       assert.match(res.headers['content-type'], /text\/html/);
 
-      const expectedTrackingUrl = 'https://nav.rutorbit.com/t/NDk5OV82NDA1/?ttclid=fb_123&p2=US-TIK-HI-RVS&sub1=2876212&sub7=US-TIK-HI-RVS';
-      assert.ok(res.body.includes(`href="${expectedTrackingUrl}"`));
+      const expectedTrackingUrl = new URL(config.routeclk.baseUrl);
+      expectedTrackingUrl.searchParams.set('ttclid', 'fb_123');
+      expectedTrackingUrl.searchParams.set('p2', 'US-TIK-HI-RVS');
+      expectedTrackingUrl.searchParams.set('p11', '2876212');
+      expectedTrackingUrl.searchParams.set('p15', 'US-TIK-HI-RVS');
+      assert.ok(res.body.includes(expectedTrackingUrl.toString()));
     });
 
     it('should return JSON destination for TikTok traffic via API when tk=1', async () => {
-      const res = await makeRequest('/api/v1/tracking/resolve?ttclid=fb_123&p2=US-TIK-HI-RVS&sub7=US-TIK-HI-RVS&tk=1');
+      const res = await makeRequest('/api/v1/tracking/resolve?ttclid=fb_123&p2=US-TIK-HI-RVS&p15=US-TIK-HI-RVS&tk=1');
       assert.strictEqual(res.statusCode, 200);
       const json = JSON.parse(res.body);
       assert.strictEqual(json.status, 'success');
       assert.strictEqual(json.isFallback, false);
-      assert.strictEqual(json.destinationUrl, 'https://nav.rutorbit.com/t/NDk5OV82NDA1/?ttclid=fb_123&p2=US-TIK-HI-RVS&sub1=2876212&sub7=US-TIK-HI-RVS');
+
+      const expectedTrackingUrl = new URL(config.routeclk.baseUrl);
+      expectedTrackingUrl.searchParams.set('ttclid', 'fb_123');
+      expectedTrackingUrl.searchParams.set('p2', 'US-TIK-HI-RVS');
+      expectedTrackingUrl.searchParams.set('p11', '2876212');
+      expectedTrackingUrl.searchParams.set('p15', 'US-TIK-HI-RVS');
+      assert.strictEqual(json.destinationUrl, expectedTrackingUrl.toString());
     });
 
     it('should redirect TikTok traffic to fallback if tk=1 is missing', async () => {
-      const res = await makeRequest('/us/search/?ttclid=fb_123&p2=US-TIK-HI-RVS&sub7=US-TIK-HI-RVS');
+      const res = await makeRequest('/us/search-2/?ttclid=fb_123&p2=US-TIK-HI-RVS&p15=US-TIK-HI-RVS');
       assert.strictEqual(res.statusCode, 302);
       assert.ok(res.headers.location.startsWith(config.fallback.baseUrl));
     });
 
     it('should return isFallback: true via JSON API when TikTok traffic is missing tk=1', async () => {
-      const res = await makeRequest('/api/v1/tracking/resolve?ttclid=fb_123&p2=US-TIK-HI-RVS&sub7=US-TIK-HI-RVS');
+      const res = await makeRequest('/api/v1/tracking/resolve?ttclid=fb_123&p2=US-TIK-HI-RVS&p15=US-TIK-HI-RVS');
       assert.strictEqual(res.statusCode, 200);
       const json = JSON.parse(res.body);
       assert.strictEqual(json.status, 'success');

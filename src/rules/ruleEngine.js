@@ -11,9 +11,9 @@ const UNRESOLVED_CAMPAIGN_MACROS = [
   '{campaign_id}',
   '{{campaign_id}}',
   '%7b%7bcampaign_id%7d%7d',
-  '{sub7}',
-  '{{sub7}}',
-  '%7b%7bsub7%7d%7d',
+  '{p15}',
+  '{{p15}}',
+  '%7b%7bp15%7d%7d',
 ];
 
 const defaultPrefixes = ['us-hs-bv', 'us-tik-hi-rv'];
@@ -118,35 +118,35 @@ function evaluateP2Rule(p2) {
 }
 
 /**
- * Evaluates SUB7 parameter.
- * Rule: ALLOW only if STARTS_WITH 'US-hs-Bv' (or 'HI-Lead-Rvs')
+ * Evaluates P15 parameter.
+ * Rule: ALLOW only if STARTS_WITH 'US-hs-Bv' (or 'US-TIK-HI-RV')
  * 
- * @param {string|null|undefined} sub7 - The sub7 / SUB7 parameter value
+ * @param {string|null|undefined} p15 - The p15 / P15 parameter value
  * @returns {{ isDenied: boolean, reason: string | null }} Rule evaluation result
  */
-function evaluateSub7Rule(sub7) {
-  if (!sub7 || typeof sub7 !== 'string' || sub7.trim() === '') {
+function evaluateP15Rule(p15) {
+  if (!p15 || typeof p15 !== 'string' || p15.trim() === '') {
     return {
       isDenied: true,
-      reason: 'sub7_empty',
+      reason: 'p15_empty',
     };
   }
 
-  const trimmedSub7 = sub7.trim();
+  const trimmedP15 = p15.trim();
 
   // Deny unresolved template macros or braces
-  if (trimmedSub7.startsWith('{') || UNRESOLVED_CAMPAIGN_MACROS.includes(trimmedSub7.toLowerCase())) {
+  if (trimmedP15.startsWith('{') || UNRESOLVED_CAMPAIGN_MACROS.includes(trimmedP15.toLowerCase())) {
     return {
       isDenied: true,
-      reason: 'sub7_unresolved_macro',
+      reason: 'p15_unresolved_macro',
     };
   }
 
-  // Must START WITH allowed prefix (US-hs-Bv for SmartValue, HI-Lead-Rvs for SecureSavings)
-  if (!hasValidPrefix(trimmedSub7)) {
+  // Must START WITH allowed prefix (US-hs-Bv for SmartValue, US-TIK-HI-RV for TikTok)
+  if (!hasValidPrefix(trimmedP15)) {
     return {
       isDenied: true,
-      reason: 'sub7_prefix_mismatch',
+      reason: 'p15_prefix_mismatch',
     };
   }
 
@@ -158,10 +158,11 @@ function evaluateSub7Rule(sub7) {
 
 /**
  * Validates request tracking parameters.
- * ALL 3 CONDITIONS MUST BE SATISFIED TO ALLOW:
- * 1. fbclid must be present & valid.
- * 2. p2 must start with 'HI-Lead-Rvs'.
- * 3. sub7 must start with 'HI-Lead-Rvs'.
+ * ALL CONDITIONS MUST BE SATISFIED TO ALLOW:
+ * 1. fbclid (or ttclid) must be present & valid.
+ * 2. p2 must start with allowed prefix.
+ * 3. p15 must start with allowed prefix.
+ * 4. Channel flag validation (tk=1 for TikTok, fb=1 for Facebook).
  * 
  * @param {Object} query - Incoming query parameters
  * @returns {{ isValid: boolean, isDenied: boolean, denyReason: string | null }}
@@ -170,7 +171,7 @@ function validateTrackingParams(query = {}) {
   const fbclid = query.fbclid;
   const ttclid = query.ttclid;
   const p2 = query.p2 || query.P2;
-  const sub7 = query.sub7 || query.SUB7 || query.p7 || query.P7;
+  const p15 = query.p15 || query.P15;
 
   // Condition 1: Click ID check (fbclid or ttclid)
   let clickIdEval;
@@ -198,20 +199,20 @@ function validateTrackingParams(query = {}) {
     };
   }
 
-  // Condition 3: sub7 starts with allowed prefix (US-hs-Bv or US-TIK-HI-RV)
-  const sub7Eval = evaluateSub7Rule(sub7);
-  if (sub7Eval.isDenied) {
+  // Condition 3: p15 starts with allowed prefix (US-hs-Bv or US-TIK-HI-RV)
+  const p15Eval = evaluateP15Rule(p15);
+  if (p15Eval.isDenied) {
     return {
       isValid: false,
       isDenied: true,
-      denyReason: sub7Eval.reason,
+      denyReason: p15Eval.reason,
     };
   }
 
   // Condition 4: Mandatory channel flag validation (TikTok requires tk=1, Facebook requires fb=1)
   const isTikTok = (ttclid !== undefined && ttclid !== '') ||
     (typeof p2 === 'string' && p2.trim().toLowerCase().startsWith('us-tik-hi-rv')) ||
-    (typeof sub7 === 'string' && sub7.trim().toLowerCase().startsWith('us-tik-hi-rv'));
+    (typeof p15 === 'string' && p15.trim().toLowerCase().startsWith('us-tik-hi-rv'));
 
   if (isTikTok) {
     const isTkOne = query.tk !== undefined && query.tk.toString().trim() === '1';
@@ -249,7 +250,8 @@ module.exports = {
   evaluateFbclidRule,
   evaluateTtclidRule,
   evaluateP2Rule,
-  evaluateSub7Rule,
+  evaluateP15Rule,
+  evaluateSub7Rule: evaluateP15Rule,
   validateTrackingParams,
   UNRESOLVED_CAMPAIGN_MACROS,
 };

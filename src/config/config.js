@@ -9,10 +9,14 @@ const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
 
   routeclk: {
-    baseUrl: process.env.ROUTECLK_BASE_URL || 'https://nav.rutorbit.com/t/NDkwNV82NDA1/',
-    tiktokBaseUrl: process.env.ROUTECLK_TIKTOK_BASE_URL || 'https://nav.rutorbit.com/t/NDk5OV82NDA1/',
-    tiktokSub1: process.env.TIKTOK_SUB1_VAL || '2876212',
-    facebookSub1: process.env.FACEBOOK_SUB1_VAL || '1253687',
+    // /us/search-2/ always uses the dedicated url_id=2 destination.
+    search2BaseUrl: process.env.ROUTECLK_SEARCH2_BASE_URL || 'https://nav.rutorbit.com/t/NDkwNV82NDA1/?url_id=2',
+    baseUrl: process.env.ROUTECLK_BASE_URL || 'https://nav.rutorbit.com/t/NDkwNV82NDA1/?url_id=2',
+    tiktokBaseUrl: process.env.ROUTECLK_TIKTOK_BASE_URL || 'https://nav.rutorbit.com/t/NDkwNV82NDA1/?url_id=2',
+    tiktokP11: process.env.TIKTOK_P11_VAL || process.env.TIKTOK_SUB1_VAL || '2876212',
+    facebookP11: process.env.FACEBOOK_P11_VAL || process.env.FACEBOOK_SUB1_VAL || '1253687',
+    get tiktokSub1() { return this.tiktokP11; },
+    get facebookSub1() { return this.facebookP11; },
   },
 
   fallback: {
